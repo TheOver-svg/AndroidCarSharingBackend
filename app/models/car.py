@@ -9,5 +9,26 @@ class Car(Base):
     price = Column(Integer)
     latitude = Column(Float)
     longitude = Column(Float)
-    fuel_level = Column(Integer)
     plate_number = Column(String(20), unique=True)
+    description = Column(String(255))
+    
+    engine_type = Column(String(20))
+    
+    __mapper_args__ = {
+        
+        "polymorphic_on": engine_type,
+        "polymorphic_identity": "base_car"
+    }
+class GasolineCar(Car):
+    fuel_level = Column(Integer) 
+
+    __mapper_args__ = {
+        "polymorphic_identity": "gasoline" 
+    }
+
+class ElectricCar(Car):
+    battery_level = Column(Integer)
+
+    __mapper_args__ = {
+        "polymorphic_identity": "electric"
+    }
