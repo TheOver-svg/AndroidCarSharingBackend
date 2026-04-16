@@ -23,7 +23,7 @@ class CarResponse(BaseModel):
     price: int
     plateNumber: str = Field(validation_alias="plate_number")
     description: str
-    engineType: str = Field(validation_alias="engine_type")
+    engine_type: str = Field(validation_alias="engine_type")
     
     fuelLevel: Optional[int] = Field(default=None, validation_alias="fuel_level")
     batteryLevel: Optional[int] = Field(default=None, validation_alias="battery_level")
