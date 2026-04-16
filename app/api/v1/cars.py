@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends
+from fastapi import FastAPI, APIRouter, Depends, HTTPException
 import app.models.car as models
 from app.shemas.car import CarResponse, LatLngSchema, CarCreate
 from sqlalchemy.orm import Session
@@ -26,10 +26,13 @@ def get_all_cars(db: Session = Depends(get_db)):
             "model": car.model,
             "transmission": car.transmission,
             "price": car.price,
-            "fuel_level": car.fuel_level,
+            "engine_type": car.engine_type,
             "plate_number": car.plate_number,
             "location": LatLngSchema(latitude=car.latitude, longitude=car.longitude),
-            "description": car.description
+            "description": car.description,
+            
+            "fuel_level": getattr(car, "fuel_level", None),
+            "battery_level": getattr(car, "battery_level", None),
         }
         result.append(car_dict)
         
