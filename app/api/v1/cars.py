@@ -3,7 +3,7 @@ import app.models.car as models
 from app.shemas.car import CarResponse, LatLngSchema, CarCreate
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-
+from app.models.car import GasolineCar, ElectricCar 
 
 app = FastAPI()
 router = APIRouter()
@@ -28,35 +28,54 @@ def get_all_cars(db: Session = Depends(get_db)):
             "price": car.price,
             "fuel_level": car.fuel_level,
             "plate_number": car.plate_number,
-            "location": LatLngSchema(latitude=car.latitude, longitude=car.longitude)
+            "location": LatLngSchema(latitude=car.latitude, longitude=car.longitude),
+            "description": car.description
         }
         result.append(car_dict)
         
     return result
 
 
-@router.post("/create_car")
+@router.post("/create_car", response_model=CarResponse)
 def create_car(car: CarCreate, db: Session = Depends(get_db)):
-    new_car = models.Car(
-        model=car.model,
-        transmission=car.transmission,
-        price=car.price,
-        fuel_level=car.fuel_level,
-        plate_number=car.plate_number,
-        latitude=car.location.latitude,
-        longitude=car.location.longitude
-    )
+    
+    existing_car = db.query(models.Car).filter(models.Car.plate_number == car.plate_number).first()
+    if existing_car:
+        raise HTTPException(status_code=400, detail="Машина з таким номером вже існує!")
+    if car.engine_type == "electric":
+        new_car = ElectricCar(
+            battery_level=car.battery_level
+        )
+    elif car.engine_type == "gasoline":
+        new_car = GasolineCar(
+            fuel_level=car.fuel_level
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Невідомий тип двигуна")
+
+    new_car.model = car.model
+    new_car.transmission = car.transmission
+    new_car.price = car.price
+    new_car.plate_number = car.plate_number
+    new_car.description = car.description
+    new_car.latitude = car.location.latitude
+    new_car.longitude = car.location.longitude
+
     db.add(new_car)
     db.commit()
     db.refresh(new_car)
+    
     return {
         "id": str(new_car.id),
         "model": new_car.model,
         "transmission": new_car.transmission,
         "price": new_car.price,
-        "fuel_level": new_car.fuel_level,
+        "engine_type": new_car.engine_type,
         "plate_number": new_car.plate_number,
-        "location": LatLngSchema(latitude=new_car.latitude, longitude=new_car.longitude)
+        "description": new_car.description,
+        "fuel_level": getattr(new_car, "fuel_level", None),
+        "battery_level": getattr(new_car, "battery_level", None), 
+        "location": {"latitude": new_car.latitude, "longitude": new_car.longitude}
     }
 
 app.include_router(router)
