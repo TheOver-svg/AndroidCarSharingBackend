@@ -1,20 +1,11 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 import app.models.car as models
-from app.shemas.car import CarResponse, LatLngSchema, CarCreate
+from app.schemas.car import CarResponse, LatLngSchema, CarCreate
 from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
+from app.db.session import get_db
 from app.models.car import GasolineCar, ElectricCar 
 
-app = FastAPI()
 router = APIRouter()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.get("/cars", response_model=list[CarResponse])
 def get_all_cars(db: Session = Depends(get_db)):
@@ -30,7 +21,6 @@ def get_all_cars(db: Session = Depends(get_db)):
             "plate_number": car.plate_number,
             "location": LatLngSchema(latitude=car.latitude, longitude=car.longitude),
             "description": car.description,
-            
             "fuel_level": getattr(car, "fuel_level", None),
             "battery_level": getattr(car, "battery_level", None),
         }
@@ -38,21 +28,16 @@ def get_all_cars(db: Session = Depends(get_db)):
         
     return result
 
-
 @router.post("/create_car", response_model=CarResponse)
 def create_car(car: CarCreate, db: Session = Depends(get_db)):
-    
     existing_car = db.query(models.Car).filter(models.Car.plate_number == car.plate_number).first()
     if existing_car:
         raise HTTPException(status_code=400, detail="Машина з таким номером вже існує!")
+        
     if car.engine_type == "electric":
-        new_car = ElectricCar(
-            battery_level=car.battery_level
-        )
+        new_car = ElectricCar(battery_level=car.battery_level)
     elif car.engine_type == "gasoline":
-        new_car = GasolineCar(
-            fuel_level=car.fuel_level
-        )
+        new_car = GasolineCar(fuel_level=car.fuel_level)
     else:
         raise HTTPException(status_code=400, detail="Невідомий тип двигуна")
 
@@ -80,5 +65,3 @@ def create_car(car: CarCreate, db: Session = Depends(get_db)):
         "battery_level": getattr(new_car, "battery_level", None), 
         "location": {"latitude": new_car.latitude, "longitude": new_car.longitude}
     }
-
-app.include_router(router)
