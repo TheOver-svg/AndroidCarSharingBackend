@@ -4,11 +4,12 @@ from app.schemas.car import CarResponse, LatLngSchema, CarCreate
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.car import GasolineCar, ElectricCar 
+from app.api.deps import get_current_user
 
 router = APIRouter()
 
 @router.get("/cars", response_model=list[CarResponse])
-def get_all_cars(db: Session = Depends(get_db)):
+def get_all_cars(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     db_cars = db.query(models.Car).all()
     result = []
     for car in db_cars:
@@ -29,7 +30,7 @@ def get_all_cars(db: Session = Depends(get_db)):
     return result
 
 @router.post("/create_car", response_model=CarResponse)
-def create_car(car: CarCreate, db: Session = Depends(get_db)):
+def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     existing_car = db.query(models.Car).filter(models.Car.plate_number == car.plate_number).first()
     if existing_car:
         raise HTTPException(status_code=400, detail="Машина з таким номером вже існує!")

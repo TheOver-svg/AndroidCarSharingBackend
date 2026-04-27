@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import LoginRequest
-
+from app.core.secutiry import create_access_token
 router = APIRouter()
 
 @router.post("/login")
@@ -16,8 +16,10 @@ def login_user(credentials: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Невірний email або пароль"
         )
+        
+    access_token = create_access_token(data={"sub": str(user.id)})
     return {
         "message": "Успішний вхід",
-        "token": "fake-jwt-token-123",
+        "token": access_token,
         "user_id": user.id
     }
