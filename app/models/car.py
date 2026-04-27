@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float
 from app.db.session import Base
+from sqlalchemy.orm import relationship
 
 class Car(Base):
     __tablename__ = "cars"
@@ -13,6 +14,7 @@ class Car(Base):
     description = Column(String(255))
     
     engine_type = Column(String(20))
+    trips = relationship("Trip", back_populates="car")
     
     __mapper_args__ = {
         
