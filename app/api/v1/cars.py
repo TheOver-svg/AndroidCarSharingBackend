@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.car import GasolineCar, ElectricCar 
 from app.api.deps import get_current_user
+from app.models.trip import Trip
 
 router = APIRouter()
 
@@ -66,3 +67,19 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: dict
         "battery_level": getattr(new_car, "battery_level", None), 
         "location": {"latitude": new_car.latitude, "longitude": new_car.longitude}
     }
+    
+@router.post("/cars/{car_id}/book")
+def book_car(car_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    active_trip = db.query(Trip).filter(Trip.car_id == car_id, Trip.status == "active").first()
+    if active_trip:
+        raise HTTPException(status_code=400, detail="Машина вже заброньована")
+    new_trip = Trip(
+        user_id=current_user["user_id"],
+        car_id=car_id,
+        status="active"
+    )
+    
+    db.add(new_trip)
+    db.commit()
+    db.refresh(new_trip)
+    return {"status": "success", "trip_id": new_trip.id}
