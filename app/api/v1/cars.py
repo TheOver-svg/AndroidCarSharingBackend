@@ -11,7 +11,14 @@ router = APIRouter()
 
 @router.get("/cars", response_model=list[CarResponse])
 def get_all_cars(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    db_cars = db.query(models.Car).all()
+    active_trips = db.query(Trip.car_id).filter(Trip.status == "active").all()
+    active_car_ids = [trip[0] for trip in active_trips]
+
+    if active_car_ids:
+        db_cars = db.query(models.Car).filter(models.Car.id.notin_(active_car_ids)).all()
+    else:
+        db_cars = db.query(models.Car).all()
+
     result = []
     for car in db_cars:
         car_dict = {
