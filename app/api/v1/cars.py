@@ -5,12 +5,20 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.car import GasolineCar, ElectricCar 
 from app.api.deps import get_current_user
+from app.models.trip import Trip
 
 router = APIRouter()
 
 @router.get("/cars", response_model=list[CarResponse])
 def get_all_cars(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    db_cars = db.query(models.Car).all()
+    active_trips = db.query(Trip.car_id).filter(Trip.status == "active").all()
+    active_car_ids = [trip[0] for trip in active_trips]
+
+    if active_car_ids:
+        db_cars = db.query(models.Car).filter(models.Car.id.notin_(active_car_ids)).all()
+    else:
+        db_cars = db.query(models.Car).all()
+
     result = []
     for car in db_cars:
         car_dict = {
@@ -66,3 +74,19 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: dict
         "battery_level": getattr(new_car, "battery_level", None), 
         "location": {"latitude": new_car.latitude, "longitude": new_car.longitude}
     }
+    
+@router.post("/cars/{car_id}/book")
+def book_car(car_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    active_trip = db.query(Trip).filter(Trip.car_id == car_id, Trip.status == "active").first()
+    if active_trip:
+        raise HTTPException(status_code=400, detail="Машина вже заброньована")
+    new_trip = Trip(
+        user_id=current_user["user_id"],
+        car_id=car_id,
+        status="active"
+    )
+    
+    db.add(new_trip)
+    db.commit()
+    db.refresh(new_trip)
+    return {"status": "success", "trip_id": new_trip.id}
