@@ -77,9 +77,14 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: dict
     
 @router.post("/cars/{car_id}/book")
 def book_car(car_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    car = db.query(models.Car).filter(models.Car.id == car_id).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Машину не знайдено")
+
     active_trip = db.query(Trip).filter(Trip.car_id == car_id, Trip.status == "active").first()
     if active_trip:
         raise HTTPException(status_code=400, detail="Машина вже заброньована")
+    
     new_trip = Trip(
         user_id=current_user["user_id"],
         car_id=car_id,
@@ -89,4 +94,9 @@ def book_car(car_id: int, db: Session = Depends(get_db), current_user = Depends(
     db.add(new_trip)
     db.commit()
     db.refresh(new_trip)
-    return {"status": "success", "trip_id": new_trip.id}
+    return {
+        "id": new_trip.id,           
+        "car_id": new_trip.car_id,
+        "status": new_trip.status,
+        "car_model": car.model       
+    }
