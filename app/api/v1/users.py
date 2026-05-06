@@ -5,6 +5,8 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.trip import Trip
 from pydantic import BaseModel
+from datetime import datetime
+from app.models.car import Car
 
 router = APIRouter()
 
@@ -46,3 +48,17 @@ def get_my_trips(current_user: dict = Depends(get_current_user), db: Session = D
             "total_cost": trip.total_cost
         })
     return result
+
+@router.post("/{trip_id}/finish")
+async def finish_trip(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    trip.status = "finished"
+    trip.end_time = datetime.utcnow()
+    car = db.query(Car).filter(Car.id == trip.car_id).first()
+    if car:
+        car.status = "available"
+    
+    db.commit()
+    return {"message": "Trip finished successfully"}
