@@ -11,7 +11,6 @@ router = APIRouter()
 
 @router.get("/trips/all")
 def get_all_trips_admin(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    # В ідеалі тут має бути перевірка на admin статус користувача
     trips = db.query(Trip).all()
     
     result = []
@@ -19,10 +18,10 @@ def get_all_trips_admin(db: Session = Depends(get_db), current_user: dict = Depe
         result.append({
             "trip_id": trip.id,
             "user_name": trip.user.full_name,
-            "user_email": trip.user.email,
-            "car_model": trip.car.model,
+            "user_email": trip.user.email,   
+            "car_model": trip.car.model,       
             "status": trip.status,
-            "start_time": trip.start_time
+            "start_time": trip.start_time.isoformat() if trip.start_time else None
         })
     return result
 
@@ -33,4 +32,8 @@ def delete_car(car_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Машину не знайдено")
     db.delete(car)
     db.commit()
-    return {"message": "Машину видалено"}
+    return {"message": "Машину видалено успішно"}
+
+@router.get("/cars/all")
+def get_all_cars_admin(db: Session = Depends(get_db)):
+    return db.query(models.Car).all()
