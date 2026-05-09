@@ -8,6 +8,7 @@ class AdminTripResponse(BaseModel):
     car_model: str
     status: str
     start_time: datetime
+    total_cost: Optional(float)= None
 
     class Config:
         from_attributes = True
