@@ -54,11 +54,20 @@ async def finish_trip(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    car = db.query(Car).filter(Car.id == trip.car_id).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Car for this trip not found")
     trip.status = "finished"
     trip.end_time = datetime.utcnow()
-    car = db.query(Car).filter(Car.id == trip.car_id).first()
-    if car:
-        car.status = "available"
+    duration = trip.end_time - trip.start_time
+    duration_minutes = duration.total_seconds() / 60
+    minutes_to_charge = max(1, round(duration_minutes))
+    trip.total_cost = minutes_to_charge * car.price
+    car.status = "available"
     
     db.commit()
-    return {"message": "Trip finished successfully"}
+    return {
+        "message": "Trip finished successfully",
+        "total_cost": trip.total_cost,
+        "duration_minutes": minutes_to_charge
+    }
