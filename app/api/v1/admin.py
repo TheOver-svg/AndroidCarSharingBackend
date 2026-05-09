@@ -21,7 +21,8 @@ def get_all_trips_admin(db: Session = Depends(get_db), current_user: dict = Depe
             "user_email": trip.user.email,   
             "car_model": trip.car.model,       
             "status": trip.status,
-            "start_time": trip.start_time.isoformat() if trip.start_time else None
+            "start_time": trip.start_time.isoformat() if trip.start_time else None,
+            "total_cost": trip.total_cost
         })
     return result
 

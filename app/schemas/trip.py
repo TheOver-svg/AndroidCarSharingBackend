@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class AdminTripResponse(BaseModel):
     trip_id: int
@@ -8,7 +9,7 @@ class AdminTripResponse(BaseModel):
     car_model: str
     status: str
     start_time: datetime
-    total_cost: Optional(float)= None
+    total_cost: Optional[float]= None
 
     class Config:
         from_attributes = True
