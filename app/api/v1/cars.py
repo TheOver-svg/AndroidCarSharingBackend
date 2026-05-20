@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 import app.models.car as models
 from app.schemas.car import CarResponse, LatLngSchema, CarCreate
 from sqlalchemy.orm import Session
@@ -6,6 +6,11 @@ from app.db.session import get_db
 from app.models.car import GasolineCar, ElectricCar 
 from app.api.deps import get_current_user
 from app.models.trip import Trip
+from app.api import deps
+from app.models.trip import Trip
+from app.models.car import Car  
+from app.models.user import User
+from app.services.pdf_service import generate_rental_contract_pdf
 
 router = APIRouter()
 
@@ -100,3 +105,32 @@ def book_car(car_id: int, db: Session = Depends(get_db), current_user = Depends(
         "status": new_trip.status,
         "car_model": car.model       
     }
+    
+@router.get("/trips/{trip_id}/contract.pdf")
+def get_trip_contract_pdf(
+    trip_id: int,
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)  
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+        
+    if trip.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    car = db.query(Car).filter(Car.id == trip.car_id).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+        
+    user_db = db.query(User).filter(User.id == current_user["user_id"]).first()
+    if not user_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    pdf_bytes = generate_rental_contract_pdf(user=user_db, car=car, trip=trip)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=contract_{trip_id}.pdf"
+        }
+    )
